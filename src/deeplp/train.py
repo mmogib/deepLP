@@ -1,3 +1,4 @@
+from collections import namedtuple
 import importlib
 import inspect
 from typing import List
@@ -6,7 +7,7 @@ import numpy as np
 
 import os
 
-from deeplp.problems import pretty_print_lp 
+from deeplp.problems import pretty_print_lp
 from deeplp.models import (
     train_model,
     save_model,
@@ -21,10 +22,11 @@ problem_module = importlib.import_module("deeplp.problems")
 # This returns a list of tuples (name, function).
 
 
-os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+# os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import matplotlib.pyplot as plt
 
 
+Solution = namedtuple("Solution", ["solution", "model", "loss_list", "mov_lis"])
 
 
 def plot_data(filename, title, ylabel):
@@ -85,7 +87,11 @@ def train(
         A = torch.tensor(A, dtype=torch.float32, device=device)
         b = torch.tensor(b, dtype=torch.float32, device=device)
         for case in cases:
-            case_saving_dir = f"{saving_dir}/case_{case}" if saving_dir is not None else f"case_{case}"
+            case_saving_dir = (
+                f"{saving_dir}/case_{case}"
+                if saving_dir is not None
+                else f"case_{case}"
+            )
             os.makedirs(case_saving_dir, exist_ok=True)
             model, loss_list, mov_list = train_model(
                 A,
@@ -117,12 +123,18 @@ def train(
             if saving_dir is not None:
                 save_model(model, filename)
                 save_lists_to_file(loss_list, mov_list, filename)
-                
+
             movs_filename = f"{filename}_mov.txt"
             loss_filename = f"{filename}_loss.txt"
             if do_plot:
                 plot_data(loss_filename, "Trainig Loss", "Loss")
                 plot_data(movs_filename, "Trainig MOV", "MOV")
+            t_tensor = torch.tensor(
+                tspan[1], dtype=torch.float32, device=device, requires_grad=True
+            )
+            y_pred = model(t_tensor)
+            y_pred_np = y_pred.cpu().detach().numpy()
+            return Solution(y_pred_np, model, loss_list, mov_list)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,7 @@
 from collections import namedtuple
+from typing import List, Tuple
+
+from deeplp.utils import cutename
 
 
 Problem = namedtuple(
@@ -6,6 +9,21 @@ Problem = namedtuple(
     ["D", "A", "b", "tspan", "name", "test_points", "testing_D"],
     defaults=[None],
 )
+
+
+def createProblem(
+    c: List[float],
+    A: List[List[float]],
+    b: List[float],
+    tspan: Tuple[float, float],
+    *,
+    name: str | None = None,
+    test_points: List[List[float]] | None = None,
+):
+    name = cutename() if name is None else name
+    return Problem(
+        c, A, b, tspan, name=name, test_points=test_points, testing_D=test_points
+    )
 
 
 def problem1():

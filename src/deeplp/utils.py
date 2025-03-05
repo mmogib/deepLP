@@ -1,6 +1,60 @@
+import random
 import pulp
 import torch
 import numpy as np
+
+adjectives = [
+    "groundbreaking",
+    "revolutionary",
+    "important",
+    "novel",
+    "fun",
+    "interesting",
+    "fascinating",
+    "exciting",
+    "surprising",
+    "remarkable",
+    "wonderful",
+    "stunning",
+    "mini",
+    "small",
+    "tiny",
+    "cute",
+    "friendly",
+    "wild",
+]
+
+nouns = [
+    "discovery",
+    "experiment",
+    "story",
+    "journal",
+    "notebook",
+    "revelation",
+    "computation",
+    "creation",
+    "analysis",
+    "invention",
+    "blueprint",
+    "report",
+    "science",
+    "magic",
+    "program",
+    "notes",
+    "lecture",
+    "theory",
+    "proof",
+    "conjecture",
+]
+
+
+def cutename():
+    """
+    Generate a filename like "Cute discovery". Does not end with an extension.
+    """
+    adjective = random.choice(adjectives).title()  # Convert to title case
+    noun = random.choice(nouns)
+    return f"{adjective} {noun}"
 
 
 # Load the MPS file into a PuLP model.
@@ -57,7 +111,7 @@ def read_mps(filename: str):
 def in_notebook() -> bool:
     try:
         shell = get_ipython().__class__.__name__
-        return shell == "ZMQInteractiveShell" or shell=='Shell'
+        return shell == "ZMQInteractiveShell" or shell == "Shell"
     except NameError:
         print(str(NameError))
         return False

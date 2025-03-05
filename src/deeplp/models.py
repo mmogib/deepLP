@@ -434,7 +434,7 @@ def _test_model(
             )
             y_pred = model(t_tensor)
         # Flatten the tensor and convert to a formatted string
-        y_pred_str = str(y_pred.detach().cpu().numpy().flatten())
+        y_pred_str = str(y_pred.cpu().detach().numpy().flatten())
         if case == 1:
             table.add_row([f"{t:6.2f}", y_pred_str])
         else:
