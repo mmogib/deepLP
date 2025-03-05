@@ -3,7 +3,7 @@ import numpy as np
 
 def add(x:int, y:List[int]):
     s = np.array(y) + x
-    return 
+    return s 
 
 if __name__ == "__main__":
     s = add(1, [2,4])
