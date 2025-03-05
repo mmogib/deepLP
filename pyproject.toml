@@ -1,6 +1,6 @@
 [project]
 name = "deeplp"
-version = "0.4.1"
+version = "0.4.2"
 description = "A package that solves Linear Programs using pytorch"
 authors = [
     {name = "Mohammed Alshahrani",email = "mmogib@gmail.com"}
