@@ -68,6 +68,7 @@ def train(
 ):
 
     torch.manual_seed(2025)
+    print("HUH....")
     problems = [
         func
         for name, func in inspect.getmembers(problem_module, inspect.isfunction)
