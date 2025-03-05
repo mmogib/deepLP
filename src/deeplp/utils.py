@@ -57,7 +57,7 @@ def read_mps(filename: str):
 def in_notebook() -> bool:
     try:
         shell = get_ipython().__class__.__name__
-        return shell == "ZMQInteractiveShell"
+        return shell == "ZMQInteractiveShell" or shell=='Shell'
     except NameError:
         print(str(NameError))
         return False

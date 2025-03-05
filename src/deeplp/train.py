@@ -65,11 +65,10 @@ def train(
     problems_ids: List[int] = [1],
     cases: List[int] = [1],
     do_plot: bool = True,
-    saving_dir: str = "saved_models",
+    saving_dir: str | None = "saved_models",
 ):
 
     torch.manual_seed(2025)
-
     problems = [
         func
         for name, func in inspect.getmembers(problem_module, inspect.isfunction)
@@ -86,7 +85,7 @@ def train(
         A = torch.tensor(A, dtype=torch.float32, device=device)
         b = torch.tensor(b, dtype=torch.float32, device=device)
         for case in cases:
-            case_saving_dir = f"{saving_dir}/case_{case}"
+            case_saving_dir = f"{saving_dir}/case_{case}" if saving_dir is not None else f"case_{case}"
             os.makedirs(case_saving_dir, exist_ok=True)
             model, loss_list, mov_list = train_model(
                 A,
@@ -115,9 +114,10 @@ def train(
                 epochs,
                 dir_name=case_saving_dir,
             )
-            save_model(model, filename)
-
-            save_lists_to_file(loss_list, mov_list, filename)
+            if saving_dir is not None:
+                save_model(model, filename)
+                save_lists_to_file(loss_list, mov_list, filename)
+                
             movs_filename = f"{filename}_mov.txt"
             loss_filename = f"{filename}_loss.txt"
             if do_plot:

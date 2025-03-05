@@ -28,7 +28,7 @@ def main():
         "-f",
         type=str,
         help="Path to the saving folder",
-        default="saved_models",
+        action='store_const', const=None,
     )
     parser.add_argument("--do_plot", action="store_true", help="Plot them")
     parser.add_argument(
