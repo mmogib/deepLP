@@ -137,6 +137,7 @@ def train(
             y_pred_np = y_pred.cpu().detach().numpy()
             sol = [(y_pred_np, model, loss_list, mov_list)]
             solutions.append(sol)
+    print(solutions)
     return solutions
 
 
