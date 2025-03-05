@@ -135,7 +135,7 @@ def train(
             )
             y_pred = model(t_tensor)
             y_pred_np = y_pred.cpu().detach().numpy()
-            sol = Solution(y_pred_np, model, loss_list, mov_list)
+            sol = [(y_pred_np, model, loss_list, mov_list)]
             solutions.append(sol)
     return solutions
 
