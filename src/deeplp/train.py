@@ -26,9 +26,6 @@ problem_module = importlib.import_module("deeplp.problems")
 import matplotlib.pyplot as plt
 
 
-Solution = namedtuple("Solution", ["solution", "model", "loss_list", "mov_lis"])
-
-
 def plot_data(filename, title, ylabel):
     # Assume loss_list is a list of float loss values collected during training
     # Load loss_list from the text file.
@@ -134,7 +131,7 @@ def train(
             )
             y_pred = model(t_tensor)
             y_pred_np = y_pred.cpu().detach().numpy()
-            return Solution(y_pred_np, model, loss_list, mov_list)
+            return y_pred_np, model, loss_list, mov_list
 
 
 if __name__ == "__main__":
