@@ -6,11 +6,16 @@ import numpy as np
 
 import os
 
-from .problems import pretty_print_lp 
+from deeplp.problems import pretty_print_lp 
+from deeplp.models import (
+    train_model,
+    save_model,
+    test_model,
+)
 
 
 # Import the module using importlib (the file must be in your Python path)
-problem_module = importlib.import_module("problems")
+problem_module = importlib.import_module("deeplp.problems")
 
 # Use inspect.getmembers to retrieve all functions defined in the module.
 # This returns a list of tuples (name, function).
@@ -20,11 +25,6 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import matplotlib.pyplot as plt
 
 
-from models import (
-    train_model,
-    save_model,
-    test_model,
-)
 
 
 def plot_data(filename, title, ylabel):

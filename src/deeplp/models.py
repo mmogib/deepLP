@@ -10,7 +10,7 @@ from colorama import just_fix_windows_console, init, Fore, Style
 from typing import List, Callable, Optional, Tuple
 from prettytable import PrettyTable, ALL
 
-from .ode import createObjectiveFun, createPhi, createDPhi
+from deeplp.ode import createObjectiveFun, createPhi, createDPhi
 
 
 class PINN(nn.Module):

@@ -3,7 +3,7 @@ from time import sleep
 from typing import List
 import numpy as np
 
-from .train import train
+from deeplp.train import train
 
 def add(x:int, y:List[int]):
     s = np.array(y) + x
