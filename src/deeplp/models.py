@@ -1,5 +1,5 @@
 import numpy as np
-from tqdm import tqdm
+from tqdm import tqdm, tqdm_notebook
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -11,6 +11,7 @@ from typing import List, Callable, Optional, Tuple
 from prettytable import PrettyTable, ALL
 
 from deeplp.ode import createObjectiveFun, createPhi, createDPhi
+from deeplp.utils import in_notebook
 
 
 class PINN(nn.Module):
@@ -300,7 +301,8 @@ def _train_model(
     optimizer = optim.Adam(model.parameters(), lr=lr)
     print(Fore.RED + f"Starting training {training_name}" + Style.RESET_ALL)
     epoch = 1
-    epoch_par = tqdm(
+    tqdm_fun = tqdm_notebook if in_notebook() else tqdm
+    epoch_par = tqdm_fun(
         total=epochs,
         desc=f"Running {epochs} iterations".ljust(25),
         leave=False,
@@ -309,7 +311,7 @@ def _train_model(
 
     while True:
         epoch_loss = 0.0
-        patch_par = tqdm(
+        patch_par = tqdm_fun(
             batched_data,
             total=no_batches,
             desc=f"({no_batches} batches)".ljust(25),

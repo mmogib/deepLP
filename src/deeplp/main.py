@@ -4,6 +4,7 @@ from typing import List
 import numpy as np
 
 from deeplp.train import train
+from deeplp.utils import in_notebook
 
 def add(x:int, y:List[int]):
     s = np.array(y) + x
@@ -52,10 +53,17 @@ def main():
         # read_mps("mps_files/problem2.mps")
         # plot_loss()
         from tqdm import tqdm
+        if in_notebook():
+            from tqdm import tqdm_notebook
+            rnag1 = tqdm_notebook(range(10), desc="Outer loop")
+            rnag2= tqdm_notebook(range(20), desc="Inner loop", leave=False)
+        else:
+            rnag1 = tqdm(range(10), desc="Outer loop")
+            rnag2= tqdm(range(20), desc="Inner loop", leave=False)
 
-        for i in tqdm(range(10), desc="Outer loop"):
+        for i in rnag1:
             # Inner loop; using leave=False so it doesn't keep each inner bar on a new line
-            for j in tqdm(range(20), desc="Inner loop", leave=False):
+            for j in rnag2:
                 # Simulate some work
                 sleep(0.01)
         exit(0)

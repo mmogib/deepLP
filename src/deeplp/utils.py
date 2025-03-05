@@ -52,3 +52,12 @@ def read_mps(filename: str):
     print(A_tensor)
     print("Right-hand side b:")
     print(b_tensor)
+
+
+def in_notebook() -> bool:
+    try:
+        shell = get_ipython().__class__.__name__
+        return shell == "ZMQInteractiveShell"
+    except NameError:
+        print(str(NameError))
+        return False
