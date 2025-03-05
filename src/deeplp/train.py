@@ -26,6 +26,9 @@ problem_module = importlib.import_module("deeplp.problems")
 import matplotlib.pyplot as plt
 
 
+Solution = namedtuple("Solution", ["solution", "model", "loss_list", "mov_lis"])
+
+
 def plot_data(filename, title, ylabel):
     # Assume loss_list is a list of float loss values collected during training
     # Load loss_list from the text file.
@@ -68,13 +71,13 @@ def train(
 ):
 
     torch.manual_seed(2025)
-    print("HUH....")
     problems = [
         func
         for name, func in inspect.getmembers(problem_module, inspect.isfunction)
         if name.startswith("problem")
     ]
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    solutions = []
     for problem_indx in problems_ids:
         problem = problems[problem_indx - 1]
         prb = problem()
@@ -132,7 +135,9 @@ def train(
             )
             y_pred = model(t_tensor)
             y_pred_np = y_pred.cpu().detach().numpy()
-            return y_pred_np, model, loss_list, mov_list
+            sol = Solution(y_pred_np, model, loss_list, mov_list)
+            solutions.append(sol)
+    return solutions
 
 
 if __name__ == "__main__":
