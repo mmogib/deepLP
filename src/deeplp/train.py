@@ -138,7 +138,7 @@ def train(
             sol = [(y_pred_np, model, loss_list, mov_list)]
             solutions.append(sol)
     print(solutions)
-    return solutions
+    return "solutions"
 
 
 if __name__ == "__main__":
