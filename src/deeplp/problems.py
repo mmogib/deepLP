@@ -1,0 +1,110 @@
+from collections import namedtuple
+
+
+Problem = namedtuple(
+    "Problem",
+    ["D", "A", "b", "tspan", "name", "test_points", "testing_D"],
+    defaults=[None],
+)
+
+
+def problem1():
+    name = "Example 1"
+
+    D = [-9.54, -8.16, -4.26, -11.43]
+    A = [[3.18, 2.72, 1.42, 3.81]]
+    b = [7.81]
+    test_points = [[8.16], [6.72], [6.18]]
+    tspan = (0.0, 10.0)
+    return Problem(
+        D,
+        A,
+        b,
+        tspan,
+        name,
+        test_points,
+        [
+            [-29.99, -25.66, -13.39, -35.94],
+            [-3.87, -3.31, -1.73, -4.63],
+            [-24.65, -21.09, -11.01, -29.54],
+        ],
+    )
+
+
+def problem2():
+    name = "Example 2"
+    D = [-3, -1, -3]
+    A = [[2, 1, 1], [1, 2, 3], [2, 2, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]]
+    b = [2, 5, 6, 0, 0, 0]
+    tspan = (0.0, 30.0)
+    return Problem(D, A, b, tspan, name, [b])
+
+
+def problem3():
+    name = "Example 3"
+    D = [-1.0, -4.0, -3.0]
+    A = [
+        [2.0, 2.0, 1.0],  # 2x1 + 2x2 + x3 <= 4
+        [1.0, 2.0, 2.0],  # x1 + 2x2 + 2x3 <= 6
+        [-1.0, 0.0, 0.0],  # -x1 <= 0
+        [0.0, -1.0, 0.0],  # -x2 <= 0
+        [0.0, 0.0, -1.0],  # -x3 <= 0
+    ]
+    b = [4.0, 6.0, 0.0, 0.0, 0.0]
+    tspan = (0.0, 50.0)
+    return Problem(D, A, b, tspan, name, [b])
+
+
+def problem4():
+    name = "Example 4"
+    b = [15, 21, 27, 45, 30]
+    A = [[3, -5], [3, -1], [3, 1], [3, 4], [1, 3]]
+    D = [[-1, -2], [-2, -1]]
+    tspan = (0.0, 20)
+    return Problem(D[0], A, b, tspan, name, [b])
+
+
+def pretty_print_lp(problem):
+    """
+    Pretty-prints a linear program defined by a Problem namedtuple with fields:
+      D : coefficients for the objective function (list or array)
+      A : constraint matrix (list of lists or 2D array)
+      b : right-hand side values (list)
+      name : problem name (string)
+    """
+    name = problem.name
+    D = problem.D
+    A = problem.A
+    b = problem.b
+
+    # Build objective string:
+    # For example, if D = [-1, -2], we want: "-1*x1 - 2*x2"
+    obj_terms = []
+    for i, coef in enumerate(D):
+        # Format coefficient, avoiding a leading "+" for negative numbers.
+        # We convert coef to string and then add *xi.
+        term = f"{coef}*x{i+1}"
+        obj_terms.append(term)
+    objective_str = " + ".join(obj_terms)
+    # Replace occurrences of "+ -" with "- " for nicer formatting.
+    objective_str = objective_str.replace("+ -", "- ")
+
+    # Build constraint strings:
+    constraint_strs = []
+    for row, bound in zip(A, b):
+        row_terms = []
+        for j, coef in enumerate(row):
+            term = f"{coef}*x{j+1}"
+            row_terms.append(term)
+        constr = " + ".join(row_terms)
+        constr = constr.replace("+ -", "- ")
+        constr += f" <= {bound}"
+        constraint_strs.append(constr)
+
+    # Print the full linear program:
+    print(f"Linear Program: {name}")
+    print("Minimize:")
+    print("   ", objective_str)
+    print("Subject to:")
+    for cs in constraint_strs:
+        print("   ", cs)

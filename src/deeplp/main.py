@@ -3,6 +3,8 @@ from time import sleep
 from typing import List
 import numpy as np
 
+from .train import train
+
 def add(x:int, y:List[int]):
     s = np.array(y) + x
     return s 
@@ -60,7 +62,7 @@ def main():
     # examples = [example_1, example_2, example_3]
 
     print(f"Running example {args.example} for {args.iterations} epochs.")
-    output = dict(
+    train(
         batches=args.batches,
         batch_size=args.batch_size,
         epochs=args.iterations,
@@ -69,7 +71,6 @@ def main():
         do_plot=args.do_plot,
         saving_dir=args.folder,
     )
-    print(output)
 
 if __name__ == "__main__":
     main()

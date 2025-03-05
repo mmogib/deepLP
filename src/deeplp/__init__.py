@@ -1,1 +1,2 @@
-from .hello import *
+from .main import *
+from .train import train 
