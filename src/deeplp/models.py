@@ -181,9 +181,23 @@ def create_batches(
             return list(zip(ts_batches, b_list))
 
 
-def load_model(model, device: torch.DeviceObjType, filename):
+def _load_model(filename, in_dim, out_dim):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = PINN(in_dim=in_dim, out_dim=out_dim)
     model.load_state_dict(torch.load(filename, map_location=device))
+    model.eval()
     return model
+
+
+def load_model(filename, in_dim, out_dim):
+    model = _load_model(filename, in_dim, out_dim)
+
+    def evaluate_it(T):
+        t_tensor = torch.tensor(T, dtype=torch.float32, requires_grad=True)
+        val = model(t_tensor)
+        return val.detach().numpy().tolist()
+
+    return evaluate_it
 
 
 def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device):

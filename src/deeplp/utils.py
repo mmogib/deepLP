@@ -2,6 +2,7 @@ import random
 import pulp
 import torch
 import numpy as np
+from IPython import get_ipython
 
 adjectives = [
     "groundbreaking",

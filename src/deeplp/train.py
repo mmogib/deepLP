@@ -1,13 +1,11 @@
 from collections import namedtuple
-import importlib
-import inspect
 from typing import List
 import torch
 import numpy as np
 
 import os
 
-from deeplp.problems import pretty_print_lp
+from deeplp.problems import pretty_print_lp, get_all_problems
 from deeplp.models import (
     train_model,
     save_model,
@@ -16,7 +14,6 @@ from deeplp.models import (
 
 
 # Import the module using importlib (the file must be in your Python path)
-problem_module = importlib.import_module("deeplp.problems")
 
 # Use inspect.getmembers to retrieve all functions defined in the module.
 # This returns a list of tuples (name, function).
@@ -70,12 +67,8 @@ def train(
     saving_dir: str | None = "saved_models",
 ):
 
-    torch.manual_seed(2025)
-    problems = [
-        func
-        for name, func in inspect.getmembers(problem_module, inspect.isfunction)
-        if name.startswith("problem")
-    ]
+    # torch.manual_seed(2025)
+    problems = get_all_problems()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     solutions = []
     for problem_indx in problems_ids:

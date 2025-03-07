@@ -126,3 +126,7 @@ def pretty_print_lp(problem):
     print("Subject to:")
     for cs in constraint_strs:
         print("   ", cs)
+
+
+def get_all_problems():
+    return [problem1, problem2, problem3, problem4]
