@@ -1,12 +1,12 @@
 [project]
 name = "deeplp"
-version = "0.5.11"
+version = "0.5.12"
 description = "A package that solves Linear Programs using pytorch"
 authors = [
     {name = "Mohammed Alshahrani",email = "mmogib@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "numpy (>=2.2.3,<3.0.0)",
     "tqdm (>=4.67.1,<5.0.0)",
@@ -25,7 +25,7 @@ packages = [{include = "deeplp", from = "src"}]
 torch = "^2.6.0"
 
 [tool.poetry.scripts]
-deeplp = "deeplp.main:main"
+deeplp = "deeplp.main:deeplp"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
