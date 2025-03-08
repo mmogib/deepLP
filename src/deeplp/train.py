@@ -1,11 +1,11 @@
 from collections import namedtuple
-from typing import List
+from typing import Callable, List
 import torch
 import numpy as np
 
 import os
 
-from deeplp.problems import pretty_print_lp, get_all_problems
+from deeplp.problems import Problem, pretty_print_lp, get_all_problems
 from deeplp.models import (
     train_model,
     save_model,
@@ -21,6 +21,8 @@ from deeplp.models import (
 
 # os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 import matplotlib.pyplot as plt
+
+from deeplp.utils import get_file_name
 
 
 Solution = namedtuple("Solution", ["solution", "model", "loss_list", "mov_lis"])
@@ -57,10 +59,86 @@ def save_lists_to_file(loss_list, mov_list, filename):
 # Example 1: Solving one LP with 4 variables and 1 constraint
 
 
+def _train(
+    batches: int,
+    batch_size: int,
+    epochs: int,
+    problem: Problem,
+    cases: List[int],
+    do_plot: bool,
+    saving_dir: str | None,
+    device: torch.device,
+):
+    pretty_print_lp(problem)
+    D, A, b, tspan, name, test_points, D_testing_points = problem
+
+    D = torch.tensor(D, dtype=torch.float32, device=device)
+    A = torch.tensor(A, dtype=torch.float32, device=device)
+    b = torch.tensor(b, dtype=torch.float32, device=device)
+    solutions = []
+    for case in cases:
+        case_saving_dir = (
+            f"{saving_dir}/case_{case}" if saving_dir is not None else f"case_{case}"
+        )
+        os.makedirs(case_saving_dir, exist_ok=True)
+        model, loss_list, mov_list = train_model(
+            A,
+            b,
+            D,
+            f"{name} (CASE {case})",
+            tspan,
+            case,
+            epochs,
+            batch_size,
+            batches,
+            device,
+        )
+
+        if (case in [1, 2] and test_points is not None) or (
+            case == 3 and D_testing_points is not None
+        ):
+            test_points = (
+                ([D.tolist()] if D_testing_points is None else D_testing_points)
+                if case == 3
+                else test_points
+            )
+            test_model(model, device, test_points, case, tspan[1])
+
+        if saving_dir is not None:
+            filename = get_file_name(epochs, case, name=name, dir_name=saving_dir)
+            save_model(model, filename)
+            save_lists_to_file(loss_list, mov_list, filename)
+            movs_filename = f"{filename}_mov.txt"
+            loss_filename = f"{filename}_loss.txt"
+
+            if do_plot:
+                plot_data(loss_filename, "Trainig Loss", "Loss")
+                plot_data(movs_filename, "Trainig MOV", "MOV")
+        if case == 1:
+            t_tensor = torch.tensor(
+                tspan[1], dtype=torch.float32, device=device, requires_grad=True
+            )
+        elif case == 2:
+            t_tensor = torch.tensor(
+                [tspan[1], *b], dtype=torch.float32, device=device, requires_grad=True
+            ).unsqueeze(0)
+        else:
+            t_tensor = torch.tensor(
+                [tspan[1], *D], dtype=torch.float32, device=device, requires_grad=True
+            ).unsqueeze(0)
+        y_pred = model(t_tensor)
+        y_pred_np = y_pred.cpu().detach().numpy()
+        sol = Solution(y_pred_np, model, loss_list, mov_list)
+
+        solutions.append(sol)
+    return solutions
+
+
 def train(
     batches: int = 1,
     batch_size: int = 128,
     epochs: int = 1000,
+    problem: Problem | None = None,
     problems_ids: List[int] = [1],
     cases: List[int] = [1],
     do_plot: bool = True,
@@ -68,68 +146,36 @@ def train(
 ):
 
     # torch.manual_seed(2025)
-    problems = get_all_problems()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     solutions = []
-    for problem_indx in problems_ids:
-        problem = problems[problem_indx - 1]
-        prb = problem()
-        pretty_print_lp(prb)
-        D, A, b, tspan, name, test_points, D_testing_points = prb
-
-        D = torch.tensor(D, dtype=torch.float32, device=device)
-        A = torch.tensor(A, dtype=torch.float32, device=device)
-        b = torch.tensor(b, dtype=torch.float32, device=device)
-        for case in cases:
-            case_saving_dir = (
-                f"{saving_dir}/case_{case}"
-                if saving_dir is not None
-                else f"case_{case}"
-            )
-            os.makedirs(case_saving_dir, exist_ok=True)
-            model, loss_list, mov_list = train_model(
-                A,
-                b,
-                D,
-                f"{name} (CASE {case})",
-                tspan,
-                case,
-                epochs,
-                batch_size,
+    if problem is None:
+        problems = get_all_problems()
+        for problem_indx in problems_ids:
+            problem_fn = problems[problem_indx - 1]
+            sols = _train(
                 batches,
-                device,
-            )
-            test_points = (
-                ([D.tolist()] if D_testing_points is None else D_testing_points)
-                if case == 3
-                else test_points
-            )
-            filename = test_model(
-                model,
-                device,
-                test_points,
-                case,
-                tspan[1],
-                name,
+                batch_size,
                 epochs,
-                dir_name=case_saving_dir,
+                problem_fn(),
+                cases,
+                do_plot,
+                saving_dir,
+                device,
             )
-            if saving_dir is not None:
-                save_model(model, filename)
-                save_lists_to_file(loss_list, mov_list, filename)
+            solutions = solutions + sols
+    else:
+        sols = _train(
+            batches,
+            batch_size,
+            epochs,
+            problem,
+            cases,
+            do_plot,
+            saving_dir,
+            device,
+        )
+        solutions = solutions + sols
 
-            movs_filename = f"{filename}_mov.txt"
-            loss_filename = f"{filename}_loss.txt"
-            if do_plot:
-                plot_data(loss_filename, "Trainig Loss", "Loss")
-                plot_data(movs_filename, "Trainig MOV", "MOV")
-            t_tensor = torch.tensor(
-                tspan[1], dtype=torch.float32, device=device, requires_grad=True
-            )
-            y_pred = model(t_tensor)
-            y_pred_np = y_pred.cpu().detach().numpy()
-            sol = Solution(y_pred_np, model, loss_list, mov_list)
-            solutions.append(sol)
     return solutions
 
 

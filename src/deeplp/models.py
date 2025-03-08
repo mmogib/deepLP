@@ -1,17 +1,15 @@
+import os
 import numpy as np
 from tqdm import tqdm, tqdm_notebook
 import torch
 import torch.nn as nn
 import torch.optim as optim
 
-# from torch.utils.data import Dataset, DataLoader
-import datetime
 from colorama import just_fix_windows_console, init, Fore, Style
 from typing import List, Callable, Optional, Tuple
 from prettytable import PrettyTable, ALL
 
 from deeplp.ode import createObjectiveFun, createPhi, createDPhi
-from deeplp.utils import in_notebook
 
 
 class PINN(nn.Module):
@@ -270,6 +268,22 @@ def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device)
     return model, loss_list, mov_list
 
 
+def is_notebook():
+    try:
+        from IPython import get_ipython
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+            # raise ImportError("console")
+            return False
+        if "VSCODE_PID" in os.environ:  # pragma: no cover
+            # raise ImportError("vscode")
+            return False
+    except:
+        return False
+    else:  # pragma: no cover
+        return True
+
+
 def _train_model(
     phi,  # physics operator generator: phi(b) returns a function to apply to model output.
     objective_fun,  # function that computes a scalar objective from model output.
@@ -315,7 +329,7 @@ def _train_model(
     optimizer = optim.Adam(model.parameters(), lr=lr)
     print(Fore.RED + f"Starting training {training_name}" + Style.RESET_ALL)
     epoch = 1
-    tqdm_fun = tqdm_notebook if in_notebook() else tqdm
+    tqdm_fun = tqdm_notebook if is_notebook() else tqdm  #
     epoch_par = tqdm_fun(
         total=epochs,
         desc=f"Running {epochs} iterations".ljust(25),
@@ -381,30 +395,17 @@ def _train_model(
     return model, loss_list, mov_list
 
 
-def test_model(
-    model, dev, testing_list, case, T, name, epochs, *, dir_name: str = "saved_models"
-):
+def test_model(model, dev, testing_list, case, T):
     # ------------------------------
     # Evaluate the trained model at select time points
     # ------------------------------
-    current_date = datetime.date.today().strftime("%Y_%m_%d")
-    name = name.lower().replace(" ", "_")
-    filename = f"{dir_name}/{name}"
+
     if case in [2, 3]:
         test_times = np.repeat(T, len(testing_list))
         _test_model(model, test_times, case=case, dev=dev, testing_points=testing_list)
     else:
         test_times = [T]
         _test_model(model, test_times, dev=dev)
-
-    if case == 1:
-        filename = f"{filename}_time_only_pinn_{epochs}"
-    elif case == 2:
-        filename = f"{filename}_time_and_b_pinn_{epochs}"
-    else:
-        filename = f"{filename}_time_and_D_pinn_{epochs}"
-
-    return f"{filename}_{current_date}"
 
 
 def _test_model(

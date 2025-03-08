@@ -1,8 +1,10 @@
+import datetime
 import random
 import pulp
 import torch
 import numpy as np
-from IPython import get_ipython
+
+# from IPython import get_ipython
 
 adjectives = [
     "groundbreaking",
@@ -109,10 +111,24 @@ def read_mps(filename: str):
     print(b_tensor)
 
 
-def in_notebook() -> bool:
-    try:
-        shell = get_ipython().__class__.__name__
-        return shell == "ZMQInteractiveShell" or shell == "Shell"
-    except NameError:
-        print(str(NameError))
-        return False
+# def in_notebook() -> bool:
+#     try:
+#         shell = get_ipython().__class__.__name__
+#         return shell == "ZMQInteractiveShell" or shell == "Shell"
+#     except NameError:
+#         print(str(NameError))
+#         return False
+
+
+def get_file_name(epochs, case, *, name: str = "", dir_name: str = "saved_models"):
+    current_date = datetime.date.today().strftime("%Y_%m_%d")
+    name = name.lower().replace(" ", "_")
+    filename = f"{dir_name}/{name}"
+    if case == 1:
+        filename = f"{filename}_time_only_pinn_{epochs}"
+    elif case == 2:
+        filename = f"{filename}_time_and_b_pinn_{epochs}"
+    else:
+        filename = f"{filename}_time_and_D_pinn_{epochs}"
+
+    return f"{filename}_{current_date}"

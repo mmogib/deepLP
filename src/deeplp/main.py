@@ -2,11 +2,8 @@ import argparse
 import os
 from time import sleep
 
-from .problems import get_all_problems, pretty_print_lp
 from .train import train
-from .utils import in_notebook
 from .models import load_model
-from .solvers import solve_lp, solve_ode
 
 
 def main():
@@ -89,14 +86,13 @@ def main():
         # plot_loss()
         from tqdm import tqdm
 
-        if in_notebook():
-            from tqdm import tqdm_notebook
+        # from tqdm import tqdm_notebook
 
-            rnag1 = tqdm_notebook(range(10), desc="Outer loop")
-            rnag2 = tqdm_notebook(range(20), desc="Inner loop", leave=False)
-        else:
-            rnag1 = tqdm(range(10), desc="Outer loop")
-            rnag2 = tqdm(range(20), desc="Inner loop", leave=False)
+        rnag1 = tqdm(range(10), desc="Outer loop")
+        rnag2 = tqdm(range(20), desc="Inner loop", leave=False)
+        # else:
+        #         rnag1 = tqdm(range(10), desc="Outer loop")
+        #         rnag2 = tqdm(range(20), desc="Inner loop", leave=False)
 
         for i in rnag1:
             # Inner loop; using leave=False so it doesn't keep each inner bar on a new line
@@ -115,17 +111,6 @@ def main():
         T = 10.0 if args.T is None else args.T
         val = load_model(args.load, args.in_dim, args.out_dim)(T)
         print(val)
-        if (problem_indx := args.example) is not None:
-            print(problem_indx)
-            problems = get_all_problems()
-            problem = problems[problem_indx[0] - 1]
-            prb = problem()
-            pretty_print_lp(prb)
-            D, A, b, tspan, name, test_points, D_testing_points = prb
-            sol, valu = solve_lp(D, A, b)
-            sol_ode = solve_ode(prb)
-            print(f"{sol}, {valu}")
-            print(f"{sol_ode.y[:,-1]}, {valu}")
 
         exit(0)
     print(f"Running example {args.example} for {args.iterations} epochs.")
