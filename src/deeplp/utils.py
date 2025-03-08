@@ -1,4 +1,5 @@
 import datetime
+import os
 import random
 import pulp
 import torch
@@ -111,13 +112,20 @@ def read_mps(filename: str):
     print(b_tensor)
 
 
-# def in_notebook() -> bool:
-#     try:
-#         shell = get_ipython().__class__.__name__
-#         return shell == "ZMQInteractiveShell" or shell == "Shell"
-#     except NameError:
-#         print(str(NameError))
-#         return False
+def is_notebook():
+    try:
+        from IPython import get_ipython
+
+        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
+            # raise ImportError("console")
+            return False
+        if "VSCODE_PID" in os.environ:  # pragma: no cover
+            # raise ImportError("vscode")
+            return True
+    except:
+        return False
+    else:  # pragma: no cover
+        return True
 
 
 def get_file_name(epochs, case, *, name: str = "", dir_name: str = "saved_models"):

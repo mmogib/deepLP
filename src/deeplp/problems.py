@@ -6,7 +6,7 @@ from deeplp.utils import cutename
 
 Problem = namedtuple(
     "Problem",
-    ["D", "A", "b", "tspan", "name", "test_points", "testing_D"],
+    ["D", "A", "b", "tspan", "name", "b_testing_points", "c_testing_points"],
     defaults=[None],
 )
 
@@ -18,11 +18,18 @@ def createProblem(
     tspan: Tuple[float, float],
     *,
     name: str | None = None,
-    test_points: List[List[float]] | None = None,
+    b_testing_points: List[List[float]] | None = None,
+    c_testing_points: List[List[float]] | None = None,
 ):
     name = cutename() if name is None else name
     return Problem(
-        c, A, b, tspan, name=name, test_points=test_points, testing_D=test_points
+        c,
+        A,
+        b,
+        tspan,
+        name=name,
+        b_testing_points=b_testing_points,
+        c_testing_points=c_testing_points,
     )
 
 

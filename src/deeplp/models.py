@@ -1,4 +1,3 @@
-import os
 import numpy as np
 from tqdm import tqdm, tqdm_notebook
 import torch
@@ -10,6 +9,7 @@ from typing import List, Callable, Optional, Tuple
 from prettytable import PrettyTable, ALL
 
 from deeplp.ode import createObjectiveFun, createPhi, createDPhi
+from deeplp.utils import is_notebook
 
 
 class PINN(nn.Module):
@@ -266,22 +266,6 @@ def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device)
         )
 
     return model, loss_list, mov_list
-
-
-def is_notebook():
-    try:
-        from IPython import get_ipython
-
-        if "IPKernelApp" not in get_ipython().config:  # pragma: no cover
-            # raise ImportError("console")
-            return False
-        if "VSCODE_PID" in os.environ:  # pragma: no cover
-            # raise ImportError("vscode")
-            return False
-    except:
-        return False
-    else:  # pragma: no cover
-        return True
 
 
 def _train_model(
