@@ -5,6 +5,7 @@ import numpy as np
 
 import os
 
+from deeplp.ode import createObjectiveFun
 from deeplp.problems import Problem, pretty_print_lp, get_all_problems
 from deeplp.models import (
     train_model,
@@ -68,14 +69,16 @@ def _train(
     do_plot: bool,
     saving_dir: str | None,
     device: torch.device,
+    model_type: str,
 ):
-    pretty_print_lp(problem)
+    pretty_print_lp(problem, model_type)
     D, A, b, tspan, name, test_points, D_testing_points = problem
 
     D = torch.tensor(D, dtype=torch.float32, device=device)
     A = torch.tensor(A, dtype=torch.float32, device=device)
     b = torch.tensor(b, dtype=torch.float32, device=device)
     solutions = []
+    objective = createObjectiveFun(D)
     for case in cases:
         case_saving_dir = (
             f"{saving_dir}/case_{case}" if saving_dir is not None else f"case_{case}"
@@ -92,6 +95,7 @@ def _train(
             batch_size,
             batches,
             device,
+            model_type=model_type,
         )
 
         if (case in [1, 2] and test_points is not None) or (
@@ -102,7 +106,7 @@ def _train(
                 if case == 3
                 else test_points
             )
-            test_model(model, device, test_points, case, tspan[1])
+            test_model(model, device, test_points, case, tspan[1], objective)
 
         if saving_dir is not None:
             filename = get_file_name(epochs, case, name=name, dir_name=saving_dir)
@@ -143,11 +147,13 @@ def train(
     cases: List[int] = [1],
     do_plot: bool = True,
     saving_dir: str | None = "saved_models",
+    model_type: str = "pinn",
 ):
 
     # torch.manual_seed(2025)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     solutions = []
+    equality = model_type != "pinn"
     if problem is None:
         problems = get_all_problems()
         for problem_indx in problems_ids:
@@ -156,11 +162,12 @@ def train(
                 batches,
                 batch_size,
                 epochs,
-                problem_fn(),
+                problem_fn(equality=True),
                 cases,
                 do_plot,
                 saving_dir,
                 device,
+                model_type,
             )
             solutions = solutions + sols
     else:

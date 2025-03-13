@@ -33,12 +33,18 @@ def createProblem(
     )
 
 
-def problem1():
+def problem1(*, equality=False):
     name = "Example 1"
-
-    D = [-9.54, -8.16, -4.26, -11.43]
-    A = [[3.18, 2.72, 1.42, 3.81]]
-    b = [7.81]
+    if equality:
+        d = [-9.54, -8.16, -4.26, -11.43]
+        D = [*d, *(map(lambda x: -x, d)), 0.0]
+        a = [3.18, 2.72, 1.42, 3.81]
+        A = [[*a, *(map(lambda x: -x, a)), 1.0]]
+        b = [7.81]
+    else:
+        D = [-9.54, -8.16, -4.26, -11.43]
+        A = [[3.18, 2.72, 1.42, 3.81]]
+        b = [7.81]
     test_points = [[8.16], [6.72], [6.18]]
     tspan = (0.0, 10.0)
     return Problem(
@@ -56,16 +62,22 @@ def problem1():
     )
 
 
-def problem2():
+def problem2(*, equality=False):
     name = "Example 2"
-    D = [-3, -1, -3]
-    A = [[2, 1, 1], [1, 2, 3], [2, 2, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]]
-    b = [2, 5, 6, 0, 0, 0]
+    if equality:
+        D = [-3, -1, -3]
+        A = [[2, 1, 1], [1, 2, 3], [2, 2, 1]]
+        b = [2, 5, 6]
+    else:
+        D = [-3, -1, -3]
+        A = [[2, 1, 1], [1, 2, 3], [2, 2, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]]
+        b = [2, 5, 6, 0, 0, 0]
+
     tspan = (0.0, 30.0)
     return Problem(D, A, b, tspan, name, [b])
 
 
-def problem3():
+def problem3(*, equality=False):
     name = "Example 3"
     D = [-1.0, -4.0, -3.0]
     A = [
@@ -80,7 +92,7 @@ def problem3():
     return Problem(D, A, b, tspan, name, [b])
 
 
-def problem4():
+def problem4(*, equality=False):
     name = "Example 4"
     b = [15, 21, 27, 45, 30]
     A = [[3, -5], [3, -1], [3, 1], [3, 4], [1, 3]]
@@ -89,7 +101,7 @@ def problem4():
     return Problem(D[0], A, b, tspan, name, [b])
 
 
-def pretty_print_lp(problem):
+def pretty_print_lp(problem, model_type):
     """
     Pretty-prints a linear program defined by a Problem namedtuple with fields:
       D : coefficients for the objective function (list or array)
@@ -116,6 +128,7 @@ def pretty_print_lp(problem):
 
     # Build constraint strings:
     constraint_strs = []
+    op = "<=" if model_type == "pinn" else "="
     for row, bound in zip(A, b):
         row_terms = []
         for j, coef in enumerate(row):
@@ -123,9 +136,9 @@ def pretty_print_lp(problem):
             row_terms.append(term)
         constr = " + ".join(row_terms)
         constr = constr.replace("+ -", "- ")
-        constr += f" <= {bound}"
+        constr += f" {op} {bound}"
         constraint_strs.append(constr)
-
+    nonneg_constraints = [f"x{i+1} >= 0" for i in range(len(D))]
     # Print the full linear program:
     print(f"Linear Program: {name}")
     print("Minimize:")
@@ -133,6 +146,9 @@ def pretty_print_lp(problem):
     print("Subject to:")
     for cs in constraint_strs:
         print("   ", cs)
+    if model_type != "pinn":
+        for nn in nonneg_constraints:
+            print("   ", nn)
 
 
 def get_all_problems():

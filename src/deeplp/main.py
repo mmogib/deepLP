@@ -2,8 +2,12 @@ import argparse
 import os
 from time import sleep
 
+import torch
+
 from .train import train
 from .models import load_model
+from .ode import createPhi
+from .problems import problem1, problem2
 
 
 def main():
@@ -20,6 +24,7 @@ def main():
         "--batches", type=int, default=1, help="Number of training batches"
     )
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size")
+    parser.add_argument("--model", type=str, default="pinn", help="Model")
 
     parser.add_argument(
         "--folder",
@@ -88,8 +93,8 @@ def main():
 
         # from tqdm import tqdm_notebook
 
-        rnag1 = tqdm(range(10), desc="Outer loop")
-        rnag2 = tqdm(range(20), desc="Inner loop", leave=False)
+        rnag1 = tqdm(range(2), desc="Outer loop")
+        rnag2 = tqdm(range(2), desc="Inner loop", leave=False)
         # else:
         #         rnag1 = tqdm(range(10), desc="Outer loop")
         #         rnag2 = tqdm(range(20), desc="Inner loop", leave=False)
@@ -99,6 +104,24 @@ def main():
             for j in rnag2:
                 # Simulate some work
                 sleep(0.01)
+        D, A, b, tspan, name, test_points, D_testing_points = problem1(equality=False)
+        D = torch.tensor(D, dtype=torch.float32)
+        A = torch.tensor(A, dtype=torch.float32)
+        b = torch.tensor(b, dtype=torch.float32)
+        # print(D)
+        print(A.shape)
+        # print(b)
+        models = [("pinn", sum(A.shape)), ("rnn", sum(D.shape) + sum(A.shape))]
+        for m, sz in models:
+            phi, dim = createPhi(D, A, model=m)(b), sz
+            y1 = torch.ones(dim, dtype=torch.float32)
+            y2 = torch.ones((5, dim), dtype=torch.float32)
+            val1 = phi(y1)
+            print(f"Model: {m}\n")
+            print(f"dim y1 = {y1.shape}\n", val1)
+            val2 = phi(y2)
+            print(f"dim y2 = {y2.shape}\n", val2)
+
         exit(0)
     # examples = [example_1, example_2, example_3]
     if args.load:
@@ -122,6 +145,7 @@ def main():
         problems_ids=args.example,
         do_plot=args.do_plot,
         saving_dir=args.folder,
+        model_type=args.model,
     )
 
 

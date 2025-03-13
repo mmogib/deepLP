@@ -8,19 +8,26 @@ from colorama import just_fix_windows_console, init, Fore, Style
 from typing import List, Callable, Optional, Tuple
 from prettytable import PrettyTable, ALL
 
-from deeplp.ode import createObjectiveFun, createPhi, createDPhi
+from deeplp.ode import createObjectiveFun, createPhi
 from deeplp.utils import is_notebook
 
 
 class PINN(nn.Module):
-    def __init__(self, in_dim=2, out_dim=5):
+    def __init__(self, in_dim=2, out_dim=5, model_type="pinn"):
         super(PINN, self).__init__()
         # Input dimension becomes 2: one from t and one from the pooled b.
         self.fc1 = nn.Linear(in_dim, 100)
-        self.fc2 = nn.Linear(100, out_dim)
-        self.activation = nn.Tanh()
+        self.activation1 = nn.Tanh()
+        if model_type == "pinn":
+            self.fc2 = nn.Linear(100, out_dim)
+        else:
+            self.fc2 = nn.Linear(100, 100)
+            self.fc3 = nn.Linear(100, out_dim)
+            self.activation2 = nn.ReLU()
+
         self.in_dim = in_dim
         self.out_dim = out_dim
+        self.model_type = model_type
 
     def forward(self, tb):
         # If tb is a scalar, convert it to a 2D tensor with shape (1, in_dim)
@@ -29,9 +36,14 @@ class PINN(nn.Module):
         elif tb.dim() == 1:
             tb = tb.unsqueeze(1)
         t = tb[:, 0].unsqueeze(1)  # Now safe because tb is at least 2D.
-        x = self.activation(self.fc1(tb))
+        x = self.activation1(self.fc1(tb))
         out = self.fc2(x)
-        return (1 - torch.exp(-t)) * out
+        if self.model_type == "pinn":
+            return (1 - torch.exp(-t)) * out
+        else:
+            out = self.activation2(out)
+            out = self.fc3(out)
+            return (1 - torch.exp(-t)) * out
 
 
 # ------------------------------
@@ -198,9 +210,22 @@ def load_model(filename, in_dim, out_dim):
     return evaluate_it
 
 
-def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device):
+def train_model(
+    A,
+    b,
+    D,
+    name,
+    tspan,
+    case,
+    epochs,
+    batch_size,
+    batches,
+    device,
+    *,
+    model_type: str = "pinn",
+):
 
-    out_dim = sum(A.shape)
+    out_dim = sum(A.shape) if model_type == "pinn" else sum(A.shape) + sum(D.shape)
 
     def objecive_fun(b):
         if case in (1, 2):
@@ -210,7 +235,7 @@ def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device)
             return createObjectiveFun(b_mean)
 
     if case == 1:
-        phi = createPhi(D, A)
+        phi = createPhi(D, A, model=model_type)
         in_dim = 1
         model, loss_list, mov_list = _train_model(
             phi(b),
@@ -225,6 +250,7 @@ def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device)
             tol=1e-3,
             training_name=name,
             device=device,
+            model_type=model_type,
         )
     elif case == 2:
         phi = createPhi(D, A)
@@ -244,11 +270,12 @@ def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device)
             training_name=name,
             device=device,
             testing_tb=[tspan[1], *b_raw],
+            model_type=model_type,
         )
     else:
         b_raw = D.tolist()
         in_dim = 1 + A.shape[1]
-        phi = createDPhi(A, b)
+        phi = createPhi(D, A, b)
         model, loss_list, mov_list = _train_model(
             phi,
             objecive_fun,
@@ -263,6 +290,7 @@ def train_model(A, b, D, name, tspan, case, epochs, batch_size, batches, device)
             training_name=name,
             device=device,
             testing_tb=[tspan[1], *b_raw],
+            model_type=model_type,
         )
 
     return model, loss_list, mov_list
@@ -285,6 +313,7 @@ def _train_model(
     testing_tb: List[
         float
     ] = None,  # required when in_d im > 1; list of floats: first element is t, rest are b.
+    model_type: str = "pinn",
 ):
     just_fix_windows_console()
     init()
@@ -309,7 +338,7 @@ def _train_model(
             [testing_tb], dtype=torch.float32, device=device, requires_grad=True
         )
     # Create the model using the provided in_dim.
-    model = PINN(in_dim=in_dim, out_dim=out_dim).to(device)
+    model = PINN(in_dim=in_dim, out_dim=out_dim, model_type=model_type).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     print(Fore.RED + f"Starting training {training_name}" + Style.RESET_ALL)
     epoch = 1
@@ -379,17 +408,29 @@ def _train_model(
     return model, loss_list, mov_list
 
 
-def test_model(model, dev, testing_list, case, T):
+def test_model(model, dev, testing_list, case, T, objective):
     # ------------------------------
     # Evaluate the trained model at select time points
     # ------------------------------
 
     if case in [2, 3]:
         test_times = np.repeat(T, len(testing_list))
-        _test_model(model, test_times, case=case, dev=dev, testing_points=testing_list)
+        _test_model(
+            model,
+            test_times,
+            case=case,
+            dev=dev,
+            testing_points=testing_list,
+            objective=objective,
+        )
     else:
         test_times = [T]
-        _test_model(model, test_times, dev=dev)
+        _test_model(
+            model,
+            test_times,
+            dev=dev,
+            objective=objective,
+        )
 
 
 def _test_model(
@@ -399,18 +440,19 @@ def _test_model(
     case: int = 1,
     dev: torch.DeviceObjType = torch.device("cpu"),
     testing_points: List[List[float]] | None = None,
+    objective: Callable[[torch.tensor], torch.tensor],
 ):
     assert (case != 1 and testing_points is not None) or (
         case == 1 and testing_points is None
     ), f"You must provide testing points for case {case}"
     table = PrettyTable()
     if case == 1:
-        table.field_names = ["t", "ŷ(t)"]
+        table.field_names = ["t", "ŷ(t)", "obj"]
     elif case == 2:
-        table.field_names = ["t", "b", "ŷ(t)"]
+        table.field_names = ["t", "b", "ŷ(t)", "obj"]
         table.align["b"] = "l"
     else:
-        table.field_names = ["t", "D", "ŷ(t)"]
+        table.field_names = ["t", "D", "ŷ(t)", "obj"]
         table.align["D"] = "l"
 
     table.align["t"] = "l"
@@ -427,17 +469,22 @@ def _test_model(
             ).unsqueeze(0)
 
             y_pred = model(t_tensor)
+
         else:
             t_tensor = torch.tensor(
                 t, dtype=torch.float32, device=dev, requires_grad=True
             )
             y_pred = model(t_tensor)
         # Flatten the tensor and convert to a formatted string
+        y_val = objective(y_pred)
+        y_val_str = str(y_val.cpu().detach().numpy().flatten())
         y_pred_str = str(y_pred.cpu().detach().numpy().flatten())
         if case == 1:
-            table.add_row([f"{t:6.2f}", y_pred_str])
+            table.add_row([f"{t:6.2f}", y_pred_str, y_val_str])
         else:
-            table.add_row([f"{t:6.2f}", str(np.array(b).flatten()), y_pred_str])
+            table.add_row(
+                [f"{t:6.2f}", str(np.array(b).flatten()), y_pred_str, y_val_str]
+            )
 
     # Print the entire table with color formatting
     print(Fore.MAGENTA + table.get_string() + Style.RESET_ALL)
