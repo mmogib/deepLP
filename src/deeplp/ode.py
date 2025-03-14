@@ -48,10 +48,10 @@ def createPhi(
 
             return makePhiWithD
     else:
-        if D is None:
+        if b is None:
 
             def makePhiWithb(b):
-                # b = b.unsqueeze(0) if b.dim() == 1 else b
+                b = b.unsqueeze(0) if b.dim() == 1 else b
                 b = b.t()
 
                 def phi(y):
@@ -68,6 +68,7 @@ def createPhi(
 
                 return phi
 
+            return makePhiWithb
         else:
             b = b.unsqueeze(0) if b.dim() == 1 else b
             b = b.t()

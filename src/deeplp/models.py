@@ -275,7 +275,7 @@ def train_model(
     else:
         b_raw = D.tolist()
         in_dim = 1 + A.shape[1]
-        phi = createPhi(D, A, b, model=model_type)
+        phi = createPhi(None, A, b, model=model_type)
         model, loss_list, mov_list = _train_model(
             phi,
             objecive_fun,
