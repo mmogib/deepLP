@@ -2,7 +2,7 @@
 
 [![PyPI version](https://img.shields.io/pypi/v/deeplp.svg)](https://pypi.org/project/deeplp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Build Status](https://github.com/yourusername/deeplp/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/deeplp/actions)
+<!-- [![Build Status](https://github.com/yourusername/deeplp/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/deeplp/actions) -->
 
 **deeplp** is a Python package for solving linear programming problems using deep learning techniques. It leverages PyTorch for its backend computations and provides a simple API for defining problems and training models.
 
@@ -17,7 +17,7 @@
 ## Requirements
 
 **deeplp** requires:
-- Python 3.8+
+- Python 3.10+
 - PyTorch (with GPU support if desired)
 
 ### Installing PyTorch
@@ -50,60 +50,95 @@ pip install deeplp
 pip install git+https://github.com/yourusername/deeplp.git
 ```
 
-If you're using Poetry for dependency management, add it to your `pyproject.toml` like so:
-
-```toml
-[tool.poetry.dependencies]
-deeplp = "^0.1.0"  # or use the Git URL for the latest version
-```
-
 ## Basic Usage
 
-### Defining a Problem
-
-Use the provided `createProblem` function to define your linear programming problem. For example:
+### Example 1: Solving a Simple LP
 
 ```python
-from deeplp import createProblem
+from deeplp import train, createProblem
 
 # Define your problem data:
-c = [1.0, 2.0]                # Objective coefficients
-A = [
-    [3, -5],
-    [3, -1],
-    [3,  1],
-    [3,  4],
-    [1,  3]
-]                           # Constraint matrix
-b = [15, 21, 27, 45, 30]      # Right-hand side values
-tspan = (0.0, 10.0)           # Time span
+c = [1.0, 2.0]  # Objective coefficients
+A = [[3, -5], [3, -1], [3, 1], [3, 4], [1, 3]]  # Constraint matrix
+b = [15, 21, 27, 45, 30]  # Right-hand side values
+tspan = (0.0, 10.0)  # Time span
 
 # Create the problem (if no name is provided, a name is generated automatically)
-problem = createProblem(c, A, b, tspan, name=None, test_points=None)
-```
+problem = createProblem(
+    c,
+    A,
+    b,
+    tspan,
+    name="Custom Example 1",
+    b_testing_points=[[15, 21, 27, 45, 30], [15, 12, 20, 25, 50]],
+    c_testing_points=[[2, 5], [12, 20]],
+)
 
-### Training a Model
-
-The main training function has the following signature:
-
-```python
-model, loss_list, mov = train(
-    batches=2,
-    batch_size=256,
-    epochs=500,
-    problems_ids=[1, 2],
-    cases=[1, 2],
+# Train the model
+sols = train(
+    batches=1,
+    batch_size=32,
+    epochs=100,
+    problem=problem,
+    problems_ids=[],
+    cases=[1, 2, 3],
     do_plot=True,
-    saving_dir="my_saved_models"
+    model_type="pinn",
 )
 ```
 
-### Running the CLI
+### Example 2: Solving an LP with Equality Constraints
 
-After installing the package (which sets up a CLI entry point via Poetry), you can run:
+```python
+from deeplp import train, createProblem
+
+# Define your problem data:
+c = [1.0, 2.0, -1.0, -2.0, 0, 0, 0, 0, 0]  # Objective coefficients
+A = [
+    [3, -5, -3, 5, 1, 0, 0, 0, 0],
+    [3, -1, -3, 1, 0, 1, 0, 0, 0],
+    [3, 1, -3, -1, 0, 0, 1, 0, 0],
+    [3, 4, -3, -4, 0, 0, 0, 1, 0],
+    [1, 3, -1, -3, 0, 0, 0, 0, 1],
+]  # Constraint matrix
+b = [15, 21, 27, 45, 30]  # Right-hand side values
+tspan = (0.0, 10.0)  # Time span
+
+# Create the problem
+problem = createProblem(
+    c,
+    A,
+    b,
+    tspan,
+    name="Custom Example 2 (Equality)",
+    b_testing_points=[[15, 21, 27, 45, 30], [15, 12, 20, 25, 50]],
+    c_testing_points=[c],
+)
+
+# Train the model
+sols = train(
+    batches=1,
+    batch_size=32,
+    epochs=100,
+    problem=problem,
+    problems_ids=[],
+    cases=[3],
+    do_plot=True,
+    model_type="rnn",
+)
+```
+
+## Running the CLI
+
+After installing the package, you can run:
 
 ```bash
 deeplp --batches 1 --batch_size 128 --iterations 1000 --case 1 --example 1 --do_plot --folder saved_models
 ```
 
-This command runs your CLI to start training with the specified options.
+For other options, type 
+```bash
+python deeplp --help
+```
+
+This command starts training with the specified options using the **RNN model** for **case 3, example 2**, with **2 iterations**, **2 batches**, and a batch size of **1**.

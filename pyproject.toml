@@ -1,6 +1,6 @@
 [project]
 name = "deeplp"
-version = "0.5.15"
+version = "0.5.16"
 description = "A package that solves Linear Programs using pytorch"
 authors = [
     {name = "Mohammed Alshahrani",email = "mmogib@gmail.com"}
@@ -23,7 +23,7 @@ packages = [{include = "deeplp", from = "src"}]
 torch = "^2.6.0"
 
 [tool.poetry.scripts]
-deeplp = "deeplp.main:deeplp"
+deeplp = "deeplp.main:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

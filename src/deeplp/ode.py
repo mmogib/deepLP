@@ -2,12 +2,13 @@ import torch
 
 
 def createPhi(
-    D,
-    A,
+    D=None,
+    A=None,
     b=None,
     *,
     model: str = "pinn",
 ):
+    assert A is not None, "A must be defined"
     _, n = A.shape
     if model == "pinn":
         if b is None:
@@ -47,28 +48,47 @@ def createPhi(
 
             return makePhiWithD
     else:
+        if D is None:
 
-        def makePhiWithb(b):
+            def makePhiWithb(b):
+                # b = b.unsqueeze(0) if b.dim() == 1 else b
+                b = b.t()
+
+                def phi(y):
+                    y = y.unsqueeze(0) if y.dim() == 1 else y
+                    rows, _ = y.shape
+                    x = y[:, :n]  # shape: (n,)
+                    u = y[:, n : n + n]  # shape: (1,)
+                    v = y[:, n + n :]  # shape: (1,)
+                    eq1_part1 = (D - 0.5 * (u**2)).t()
+                    Eq1 = eq1_part1 + A.t() @ v.t()
+                    Eq2 = (u * x).t()
+                    Eq3 = A @ x.t() - b
+                    return -torch.cat((Eq1, Eq2, Eq3), dim=0).view(rows, -1)
+
+                return phi
+
+        else:
             b = b.unsqueeze(0) if b.dim() == 1 else b
             b = b.t()
 
-            def phi(y):
-                y = y.unsqueeze(0) if y.dim() == 1 else y
-                rows, _ = y.shape
-                x = y[:, :n]  # shape: (n,)
-                u = y[:, n : n + n]  # shape: (1,)
-                v = y[:, n + n :]  # shape: (1,)
-                eq1_part1 = (D - 0.5 * (u**2)).t()
-                Eq1 = eq1_part1 + A.t() @ v.t()
-                Eq2 = (u * x).t()
-                Eq3 = A @ x.t() - b
+            def makePhiWithD(D):
 
-                # # Concatenate along dimension 0 to form a (n+1, 1) tensor, then flatten to 1D
-                return -torch.cat((Eq1, Eq2, Eq3), dim=0).view(rows, -1)
+                def phi(y):
+                    y = y.unsqueeze(0) if y.dim() == 1 else y
+                    rows, _ = y.shape
+                    x = y[:, :n]  # shape: (n,)
+                    u = y[:, n : n + n]  # shape: (1,)
+                    v = y[:, n + n :]  # shape: (1,)
+                    eq1_part1 = (D - 0.5 * (u**2)).t()
+                    Eq1 = eq1_part1 + A.t() @ v.t()
+                    Eq2 = (u * x).t()
+                    Eq3 = A @ x.t() - b
+                    return -torch.cat((Eq1, Eq2, Eq3), dim=0).view(rows, -1)
 
-            return phi
+                return phi
 
-    return makePhiWithb
+        return makePhiWithD
 
 
 # def createPhi2(D, A):

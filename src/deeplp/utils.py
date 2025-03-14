@@ -128,15 +128,24 @@ def is_notebook():
         return True
 
 
-def get_file_name(epochs, case, *, name: str = "", dir_name: str = "saved_models"):
+def get_file_name(
+    epochs,
+    case,
+    *,
+    name: str = "",
+    dir_name: str = "saved_models",
+    model_type: str = "pinn",
+):
+    case_saving_dir = f"{dir_name}/case_{case}"
+    os.makedirs(case_saving_dir, exist_ok=True)
     current_date = datetime.date.today().strftime("%Y_%m_%d")
     name = name.lower().replace(" ", "_")
-    filename = f"{dir_name}/{name}"
+    filename = f"{case_saving_dir}/{name}"
     if case == 1:
-        filename = f"{filename}_time_only_pinn_{epochs}"
+        filename = f"{filename}_time_only_{model_type}_{epochs}"
     elif case == 2:
-        filename = f"{filename}_time_and_b_pinn_{epochs}"
+        filename = f"{filename}_time_and_b_{model_type}_{epochs}"
     else:
-        filename = f"{filename}_time_and_D_pinn_{epochs}"
+        filename = f"{filename}_time_and_D_{model_type}_{epochs}"
 
     return f"{filename}_{current_date}"

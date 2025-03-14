@@ -41,10 +41,23 @@ def problem1(*, equality=False):
         a = [3.18, 2.72, 1.42, 3.81]
         A = [[*a, *(map(lambda x: -x, a)), 1.0]]
         b = [7.81]
+        c1 = [-29.99, -25.66, -13.39, -35.94]
+        c2 = [-3.87, -3.31, -1.73, -4.63]
+        c3 = [-24.65, -21.09, -11.01, -29.54]
+        c_testing_points = [
+            [*c1, *(map(lambda x: -x, c1)), 0],
+            [*c2, *(map(lambda x: -x, c2)), 0],
+            [*c3, *(map(lambda x: -x, c3)), 0],
+        ]
     else:
         D = [-9.54, -8.16, -4.26, -11.43]
         A = [[3.18, 2.72, 1.42, 3.81]]
         b = [7.81]
+        c_testing_points = [
+            [-29.99, -25.66, -13.39, -35.94],
+            [-3.87, -3.31, -1.73, -4.63],
+            [-24.65, -21.09, -11.01, -29.54],
+        ]
     test_points = [[8.16], [6.72], [6.18]]
     tspan = (0.0, 10.0)
     return Problem(
@@ -54,11 +67,7 @@ def problem1(*, equality=False):
         tspan,
         name,
         test_points,
-        [
-            [-29.99, -25.66, -13.39, -35.94],
-            [-3.87, -3.31, -1.73, -4.63],
-            [-24.65, -21.09, -11.01, -29.54],
-        ],
+        c_testing_points,
     )
 
 
@@ -68,13 +77,15 @@ def problem2(*, equality=False):
         D = [-3, -1, -3]
         A = [[2, 1, 1], [1, 2, 3], [2, 2, 1]]
         b = [2, 5, 6]
+        c_testing_points = [D]
     else:
         D = [-3, -1, -3]
         A = [[2, 1, 1], [1, 2, 3], [2, 2, 1], [-1, 0, 0], [0, -1, 0], [0, 0, -1]]
         b = [2, 5, 6, 0, 0, 0]
+        c_testing_points = [D]
 
     tspan = (0.0, 30.0)
-    return Problem(D, A, b, tspan, name, [b])
+    return Problem(D, A, b, tspan, name, [b], c_testing_points)
 
 
 def problem3(*, equality=False):

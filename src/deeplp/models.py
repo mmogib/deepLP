@@ -191,16 +191,16 @@ def create_batches(
             return list(zip(ts_batches, b_list))
 
 
-def _load_model(filename, in_dim, out_dim):
+def _load_model(filename, in_dim, out_dim, model_type: str):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = PINN(in_dim=in_dim, out_dim=out_dim)
+    model = PINN(in_dim=in_dim, out_dim=out_dim, model_type=model_type)
     model.load_state_dict(torch.load(filename, map_location=device))
     model.eval()
     return model
 
 
-def load_model(filename, in_dim, out_dim):
-    model = _load_model(filename, in_dim, out_dim)
+def load_model(filename, in_dim, out_dim, *, model_type: str = "pinn"):
+    model = _load_model(filename, in_dim, out_dim, model_type)
 
     def evaluate_it(T):
         t_tensor = torch.tensor(T, dtype=torch.float32, requires_grad=True)
@@ -253,7 +253,7 @@ def train_model(
             model_type=model_type,
         )
     elif case == 2:
-        phi = createPhi(D, A)
+        phi = createPhi(D, A, model=model_type)
         b_raw = b.tolist()
         in_dim = len(b_raw) + 1
         model, loss_list, mov_list = _train_model(
@@ -275,7 +275,7 @@ def train_model(
     else:
         b_raw = D.tolist()
         in_dim = 1 + A.shape[1]
-        phi = createPhi(D, A, b)
+        phi = createPhi(D, A, b, model=model_type)
         model, loss_list, mov_list = _train_model(
             phi,
             objecive_fun,
@@ -341,27 +341,27 @@ def _train_model(
     model = PINN(in_dim=in_dim, out_dim=out_dim, model_type=model_type).to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     print(Fore.RED + f"Starting training {training_name}" + Style.RESET_ALL)
-    epoch = 1
     tqdm_fun = tqdm_notebook if is_notebook() else tqdm  #
-    epoch_par = tqdm_fun(
-        total=epochs,
-        desc=f"Running {epochs} iterations".ljust(25),
-        leave=False,
-        ascii=True,
-    )
 
-    while True:
-        epoch_loss = 0.0
-        patch_par = tqdm_fun(
-            batched_data,
-            total=no_batches,
-            desc=f"({no_batches} batches)".ljust(25),
+    epoch_loss = 0.0
+    patch_par = tqdm_fun(
+        batched_data,
+        total=no_batches,
+        desc=f"({no_batches} batches)".ljust(25),
+        leave=False,
+    )
+    # Use tqdm over ts_batches; we also need the index so we use enumerate.
+    for ts, b in patch_par:
+        tb = ts if b is None else torch.cat([ts, b], dim=1)
+        compute_loss_vectorized = create_loss(model, tb, phi)
+        epoch_par = tqdm_fun(
+            total=epochs,
+            desc=f"Running {epochs} iterations".ljust(25),
             leave=False,
+            ascii=True,
         )
-        # Use tqdm over ts_batches; we also need the index so we use enumerate.
-        for ts, b in patch_par:
-            tb = ts if b is None else torch.cat([ts, b], dim=1)
-            compute_loss_vectorized = create_loss(model, tb, phi)
+        epoch = 1
+        while True:
             optimizer.zero_grad()
             loss_val = compute_loss_vectorized()
             loss_val.backward()
@@ -369,13 +369,25 @@ def _train_model(
             loss_item = loss_val.item()
             epoch_loss += loss_item
             loss_list.append(loss_item)
-            patch_par.set_postfix(loss=f"{loss_item:.6f}")
-            patch_par.update(1)
             y_pred = model(t_eval)
             val = objective_fun(b)(y_pred[0])
             mov_list.append(val.item())
-        patch_par.clear()
-        epoch_loss /= no_batches
+            if epoch == epochs:
+                # print(
+                #     Fore.GREEN
+                #     + f"{training_name} | Max iteration {epochs} reached: stopping training loss = {epoch_loss:.6f}"
+                #     + Style.RESET_ALL
+                # )
+                break
+            epoch += 1
+            epoch_par.set_postfix(loss=f"{loss_item:.6f}")
+            epoch_par.update(1)
+        epoch_par.clear()
+        epoch_par.close()
+        patch_par.set_postfix(loss=f"{loss_item:.6f}")
+        # patch_par.update(1)
+        # patch_par.clear()
+        # epoch_loss /= no_batches
 
         # if epoch % display_period == 0:
         #     print(
@@ -390,18 +402,8 @@ def _train_model(
                 + Style.RESET_ALL
             )
             break
-        if epoch == epochs:
-            print(
-                Fore.GREEN
-                + f"{training_name} | Max iteration {epochs} reached: stopping training loss = {epoch_loss:.6f}"
-                + Style.RESET_ALL
-            )
-            break
+    patch_par.close()
 
-        epoch += 1
-        epoch_par.set_postfix(loss=f"{loss_item:.6f}")
-        epoch_par.update(1)
-    epoch_par.close()
     # Evaluation step:
 
     print(Fore.BLUE + "Training complete.\n" + Style.RESET_ALL)
@@ -500,3 +502,115 @@ def save_model(model: PINN, name: str = "pinn_model"):
     torch.save(model.state_dict(), filename)
 
     print(f"saving... model in {filename}")
+
+
+# def _train_model(
+#     phi,  # physics operator generator: phi(b) returns a function to apply to model output.
+#     objective_fun,  # function that computes a scalar objective from model output.
+#     *,
+#     tspan: Tuple[float, float] = (0.0, 10.0),
+#     in_dim: int = 1,
+#     out_dim: int = 5,
+#     batch_size: int = 128,
+#     no_batches: int = 1,
+#     epochs: int = 1000,
+#     lr: float = 0.001,
+#     tol: float = 1e-5,
+#     training_name: str = "",
+#     device: torch.device = torch.device("cpu"),
+#     testing_tb: List[
+#         float
+#     ] = None,  # required when in_d im > 1; list of floats: first element is t, rest are b.
+#     model_type: str = "pinn",
+# ):
+#     just_fix_windows_console()
+#     init()
+#     T = tspan[1]
+#     loss_list = []
+#     mov_list = []
+
+#     batched_data = create_batches(
+#         batch_size=batch_size,
+#         no_batches=no_batches,
+#         tspan=tspan,
+#         in_dim=in_dim,
+#         device=device,
+#     )
+#     if in_dim == 1:
+#         t_eval = torch.tensor(
+#             [[T]], dtype=torch.float32, device=device, requires_grad=True
+#         )
+#     else:
+#         # testing_tb should be provided as a list: first element is t, rest are b.
+#         t_eval = torch.tensor(
+#             [testing_tb], dtype=torch.float32, device=device, requires_grad=True
+#         )
+#     # Create the model using the provided in_dim.
+#     model = PINN(in_dim=in_dim, out_dim=out_dim, model_type=model_type).to(device)
+#     optimizer = optim.Adam(model.parameters(), lr=lr)
+#     print(Fore.RED + f"Starting training {training_name}" + Style.RESET_ALL)
+#     epoch = 1
+#     tqdm_fun = tqdm_notebook if is_notebook() else tqdm  #
+#     epoch_par = tqdm_fun(
+#         total=epochs,
+#         desc=f"Running {epochs} iterations".ljust(25),
+#         leave=False,
+#         ascii=True,
+#     )
+
+#     while True:
+#         epoch_loss = 0.0
+#         patch_par = tqdm_fun(
+#             batched_data,
+#             total=no_batches,
+#             desc=f"({no_batches} batches)".ljust(25),
+#             leave=False,
+#         )
+#         # Use tqdm over ts_batches; we also need the index so we use enumerate.
+#         for ts, b in patch_par:
+#             tb = ts if b is None else torch.cat([ts, b], dim=1)
+#             compute_loss_vectorized = create_loss(model, tb, phi)
+#             optimizer.zero_grad()
+#             loss_val = compute_loss_vectorized()
+#             loss_val.backward()
+#             optimizer.step()
+#             loss_item = loss_val.item()
+#             epoch_loss += loss_item
+#             loss_list.append(loss_item)
+#             patch_par.set_postfix(loss=f"{loss_item:.6f}")
+#             patch_par.update(1)
+#             y_pred = model(t_eval)
+#             val = objective_fun(b)(y_pred[0])
+#             mov_list.append(val.item())
+#         patch_par.clear()
+#         epoch_loss /= no_batches
+
+#         # if epoch % display_period == 0:
+#         #     print(
+#         #         Fore.MAGENTA
+#         #         + f"{training_name} | {no_batches} batches, Epoch {epoch}/{epochs}: Loss = {epoch_loss:.6f}"
+#         #         + Style.RESET_ALL
+#         #     )
+#         if epoch_loss < tol:
+#             print(
+#                 Fore.GREEN
+#                 + f"{training_name} | Stopping training at epoch {epoch} with loss = {epoch_loss:.6f}"
+#                 + Style.RESET_ALL
+#             )
+#             break
+#         if epoch == epochs:
+#             print(
+#                 Fore.GREEN
+#                 + f"{training_name} | Max iteration {epochs} reached: stopping training loss = {epoch_loss:.6f}"
+#                 + Style.RESET_ALL
+#             )
+#             break
+
+#         epoch += 1
+#         epoch_par.set_postfix(loss=f"{loss_item:.6f}")
+#         epoch_par.update(1)
+#     epoch_par.close()
+#     # Evaluation step:
+
+#     print(Fore.BLUE + "Training complete.\n" + Style.RESET_ALL)
+#     return model, loss_list, mov_list

@@ -24,7 +24,13 @@ def main():
         "--batches", type=int, default=1, help="Number of training batches"
     )
     parser.add_argument("--batch_size", type=int, default=128, help="Batch size")
-    parser.add_argument("--model", type=str, default="pinn", help="Model")
+    parser.add_argument(
+        "--model",
+        type=str,
+        choices=["pinn", "rnn"],
+        default="pinn",
+        help="Model use pinn for Ax<= b, use rnn for Ax=b, x>=0 ",
+    )
 
     parser.add_argument(
         "--folder",
@@ -132,7 +138,7 @@ def main():
         assert os.path.exists(filename), "The file does not exist; check the name."
         print(f"Loading file {filename}")
         T = 10.0 if args.T is None else args.T
-        val = load_model(args.load, args.in_dim, args.out_dim)(T)
+        val = load_model(args.load, args.in_dim, args.out_dim, model_type=args.model)(T)
         print(val)
 
         exit(0)

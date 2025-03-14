@@ -80,10 +80,6 @@ def _train(
     solutions = []
     objective = createObjectiveFun(D)
     for case in cases:
-        case_saving_dir = (
-            f"{saving_dir}/case_{case}" if saving_dir is not None else f"case_{case}"
-        )
-        os.makedirs(case_saving_dir, exist_ok=True)
         model, loss_list, mov_list = train_model(
             A,
             b,
@@ -109,7 +105,9 @@ def _train(
             test_model(model, device, test_points, case, tspan[1], objective)
 
         if saving_dir is not None:
-            filename = get_file_name(epochs, case, name=name, dir_name=saving_dir)
+            filename = get_file_name(
+                epochs, case, name=name, dir_name=saving_dir, model_type=model_type
+            )
             save_model(model, filename)
             save_lists_to_file(loss_list, mov_list, filename)
             movs_filename = f"{filename}_mov.txt"
@@ -139,6 +137,7 @@ def _train(
 
 
 def train(
+    *,
     batches: int = 1,
     batch_size: int = 128,
     epochs: int = 1000,
@@ -146,7 +145,7 @@ def train(
     problems_ids: List[int] = [1],
     cases: List[int] = [1],
     do_plot: bool = True,
-    saving_dir: str | None = "saved_models",
+    saving_dir: str | None = None,
     model_type: str = "pinn",
 ):
 
@@ -162,7 +161,7 @@ def train(
                 batches,
                 batch_size,
                 epochs,
-                problem_fn(equality=True),
+                problem_fn(equality=equality),
                 cases,
                 do_plot,
                 saving_dir,
@@ -180,6 +179,7 @@ def train(
             do_plot,
             saving_dir,
             device,
+            model_type,
         )
         solutions = solutions + sols
 
