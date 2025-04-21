@@ -71,6 +71,7 @@ def problem1(*, equality=False):
     )
 
 
+# Example 1. page 48 (62): Linear and Nonlinear
 def problem2(*, equality=False):
     name = "Example 2"
     if equality:

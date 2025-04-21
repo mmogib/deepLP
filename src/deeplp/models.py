@@ -344,57 +344,57 @@ def _train_model(
     tqdm_fun = tqdm_notebook if is_notebook() else tqdm  #
 
     epoch_loss = 0.0
-    patch_par = tqdm_fun(
-        batched_data,
-        total=no_batches,
-        desc=f"({no_batches} batches)".ljust(25),
-        leave=False,
-    )
+
     # Use tqdm over ts_batches; we also need the index so we use enumerate.
-    for ts, b in patch_par:
-        tb = ts if b is None else torch.cat([ts, b], dim=1)
-        compute_loss_vectorized = create_loss(model, tb, phi)
-        epoch_par = tqdm_fun(
-            total=epochs,
-            desc=f"Running {epochs} iterations".ljust(25),
+    epoch_par = tqdm_fun(
+        total=epochs,
+        desc=f"Running {epochs} iterations".ljust(25),
+        leave=False,
+        ascii=True,
+    )
+    epoch = 1
+
+    while True:
+        loss_item = None
+        val_item = None
+        patch_par = tqdm_fun(
+            batched_data,
+            total=no_batches,
+            desc=f"({no_batches} batches)".ljust(25),
             leave=False,
-            ascii=True,
         )
-        epoch = 1
-        while True:
+        for ts, b in patch_par:
+            tb = ts if b is None else torch.cat([ts, b], dim=1)
+            compute_loss_vectorized = create_loss(model, tb, phi)
             optimizer.zero_grad()
             loss_val = compute_loss_vectorized()
             loss_val.backward()
             optimizer.step()
             loss_item = loss_val.item()
-            epoch_loss += loss_item
-            loss_list.append(loss_item)
             y_pred = model(t_eval)
             val = objective_fun(b)(y_pred[0])
-            mov_list.append(val.item())
-            if epoch == epochs:
-                # print(
-                #     Fore.GREEN
-                #     + f"{training_name} | Max iteration {epochs} reached: stopping training loss = {epoch_loss:.6f}"
-                #     + Style.RESET_ALL
-                # )
-                break
-            epoch += 1
-            epoch_par.set_postfix(loss=f"{loss_item:.6f}")
-            epoch_par.update(1)
-        epoch_par.clear()
-        epoch_par.close()
-        patch_par.set_postfix(loss=f"{loss_item:.6f}")
-        # patch_par.update(1)
-        # patch_par.clear()
-        # epoch_loss /= no_batches
+            val_item = val.item()
+            patch_par.update(1)
+            patch_par.set_postfix(loss=f"Patch: {loss_item:.6f}")
 
-        # if epoch % display_period == 0:
-        #     print(
-        #         Fore.MAGENTA
-        #         + f"{training_name} | {no_batches} batches, Epoch {epoch}/{epochs}: Loss = {epoch_loss:.6f}"
-        #         + Style.RESET_ALL
-        #     )
+        # patch_par.reset()
+        patch_par.clear()
+        patch_par.close()
+
+        loss_list.append(loss_item)
+        mov_list.append(val_item)
+        epoch_loss = loss_item
+        if epoch == epochs:
+            print(
+                Fore.GREEN
+                + f"{training_name} | Max iteration {epochs} reached: stopping training loss = {epoch_loss:.6f}"
+                + Style.RESET_ALL
+            )
+            break
+        epoch += 1
+        epoch_par.update(1)
+        epoch_par.set_postfix(loss=f"Epoch: {epoch_loss:.6f}")
+
         if epoch_loss < tol:
             print(
                 Fore.GREEN
@@ -402,7 +402,9 @@ def _train_model(
                 + Style.RESET_ALL
             )
             break
-    patch_par.close()
+
+    epoch_par.clear()
+    epoch_par.close()
 
     # Evaluation step:
 
